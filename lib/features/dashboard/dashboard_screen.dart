@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
+import '../medication/medication_list_screen.dart';
 
-/// Temporary home shown after login. Confirms login works and offers logout.
-/// We'll build the real dashboard (medications, appointments) on top of this.
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final authService = context.read<AuthService>();
-    final email = authService.currentUser?.email ?? '';
     return Scaffold(
       appBar: AppBar(
         title: const Text('MediAssist', style: TextStyle(fontSize: 22)),
@@ -22,18 +20,90 @@ class DashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
+      body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.check_circle, size: 90, color: Colors.teal),
+              const SizedBox(height: 8),
+              const Text('What would you like to do?',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
-              const Text('You are logged in!',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Text(email, style: const TextStyle(fontSize: 18, color: Colors.black54)),
+              _DashboardTile(
+                icon: Icons.medication,
+                title: 'My Medications',
+                subtitle: 'View and manage your medicines',
+                color: Colors.teal,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MedicationListScreen()),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _DashboardTile(
+                icon: Icons.calendar_month,
+                title: 'My Appointments',
+                subtitle: 'Coming soon',
+                color: Colors.grey,
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Appointments coming soon!',
+                        style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  const _DashboardTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: color.withValues(alpha: 0.15),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(subtitle,
+                        style: const TextStyle(fontSize: 15, color: Colors.black54)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, size: 28, color: Colors.grey),
             ],
           ),
         ),
