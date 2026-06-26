@@ -1,22 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/app_user.dart';
 
-/// Wraps all Firebase authentication logic. Screens never call Firebase
-/// directly — they call this service. Keeps Firebase code in one testable place.
+/// Wraps all Firebase authentication logic in one place.
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Tells the app whether someone is logged in. The AuthGate listens to this.
   Stream<User?> get authState => _auth.authStateChanges();
-
   User? get currentUser => _auth.currentUser;
 
-  /// Register a new user and save their name to the Firestore 'users' collection.
+  /// Register a new user, saving their name AND role to Firestore.
   Future<void> register({
     required String name,
     required String email,
     required String password,
+    required UserRole role,
   }) async {
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email.trim(),
@@ -25,21 +24,28 @@ class AuthService {
     await _firestore.collection('users').doc(credential.user!.uid).set({
       'name': name.trim(),
       'email': email.trim(),
+      'role': AppUser.roleToString(role),
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// Log an existing user in.
   Future<void> login({required String email, required String password}) async {
     await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
   }
 
-  /// Log the current user out.
   Future<void> logout() async => _auth.signOut();
+
+  /// Fetch the current user's full profile (including role) from Firestore.
+  Future<AppUser?> getCurrentUserProfile() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (!doc.exists) return null;
+    return AppUser.fromMap(user.uid, doc.data()!);
+  }
 }
 
-/// Turns Firebase's technical error codes into kind, plain-language messages
-/// suitable for elderly users.
+/// Turns Firebase's technical error codes into kind, plain-language messages.
 String friendlyAuthError(Object error) {
   if (error is FirebaseAuthException) {
     switch (error.code) {

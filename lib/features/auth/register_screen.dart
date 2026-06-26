@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/widgets/app_widgets.dart';
+import '../../models/app_user.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,6 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  UserRole _selectedRole = UserRole.elderly; // sensible default
   bool _isLoading = false;
 
   @override
@@ -47,8 +49,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       await context.read<AuthService>().register(
-            name: name, email: email, password: password);
-      // Registration logs the user in automatically; AuthGate switches screens.
+            name: name,
+            email: email,
+            password: password,
+            role: _selectedRole,
+          );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       _showMessage(friendlyAuthError(e));
@@ -77,7 +82,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const Text("Let's set up your account",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
+
+              // ----- Role selection -----
+              const Text('I am a:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _roleCard(
+                      role: UserRole.elderly,
+                      title: 'Elderly User',
+                      icon: Icons.elderly,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _roleCard(
+                      role: UserRole.caregiver,
+                      title: 'Caregiver',
+                      icon: Icons.favorite,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
               AppTextField(controller: _nameController, label: 'Full Name', icon: Icons.person),
               const SizedBox(height: 20),
               AppTextField(
@@ -107,6 +138,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// A large, tappable card for choosing a role. Highlights when selected.
+  Widget _roleCard({
+    required UserRole role,
+    required String title,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedRole == role;
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => setState(() => _selectedRole = role),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: isSelected ? scheme.primaryContainer : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? scheme.primary : Colors.grey,
+            width: isSelected ? 2.5 : 1.5,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 40, color: isSelected ? scheme.primary : Colors.grey[700]),
+            const SizedBox(height: 8),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                )),
+          ],
         ),
       ),
     );
