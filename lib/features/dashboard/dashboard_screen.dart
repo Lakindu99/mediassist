@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../medication/medication_list_screen.dart';
+import '../appointment/appointment_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -43,13 +44,10 @@ class DashboardScreen extends StatelessWidget {
               _DashboardTile(
                 icon: Icons.calendar_month,
                 title: 'My Appointments',
-                subtitle: 'Coming soon',
-                color: Colors.grey,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Appointments coming soon!',
-                        style: TextStyle(fontSize: 16)),
-                  ),
+                subtitle: 'View and manage your appointments',
+                color: Colors.indigo,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AppointmentListScreen()),
                 ),
               ),
             ],
