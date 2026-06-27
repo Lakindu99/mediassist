@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
+import '../today/today_screen.dart';
 import '../medication/medication_list_screen.dart';
 import '../appointment/appointment_list_screen.dart';
 
@@ -31,6 +32,16 @@ class DashboardScreen extends StatelessWidget {
               const Text('What would you like to do?',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
+              _DashboardTile(
+                icon: Icons.today,
+                title: "Today's Plan",
+                subtitle: 'See what is due today',
+                color: Colors.deepOrange,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TodayScreen()),
+                ),
+              ),
+              const SizedBox(height: 16),
               _DashboardTile(
                 icon: Icons.medication,
                 title: 'My Medications',
