@@ -69,6 +69,7 @@ class DashboardScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const AppointmentListScreen()),
                 ),
               ),
+
             ],
           ),
         ),
