@@ -4,6 +4,7 @@ import '../../core/services/auth_service.dart';
 import '../today/today_screen.dart';
 import '../medication/medication_list_screen.dart';
 import '../appointment/appointment_list_screen.dart';
+import '../settings/settings_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -15,6 +16,13 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('MediAssist', style: TextStyle(fontSize: 22)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, size: 26),
+            tooltip: 'Accessibility settings',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout, size: 26),
             tooltip: 'Log out',
