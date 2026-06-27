@@ -10,7 +10,6 @@ class AuthService {
   Stream<User?> get authState => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  /// Register a new user, saving their name AND role to Firestore.
   Future<void> register({
     required String name,
     required String email,
@@ -35,13 +34,34 @@ class AuthService {
 
   Future<void> logout() async => _auth.signOut();
 
-  /// Fetch the current user's full profile (including role) from Firestore.
   Future<AppUser?> getCurrentUserProfile() async {
     final user = _auth.currentUser;
     if (user == null) return null;
     final doc = await _firestore.collection('users').doc(user.uid).get();
     if (!doc.exists) return null;
     return AppUser.fromMap(user.uid, doc.data()!);
+  }
+
+  /// Live stream of the current user's profile, so the Profile screen updates
+  /// instantly whenever details change.
+  Stream<AppUser?> watchCurrentUserProfile() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(null);
+    return _firestore.collection('users').doc(user.uid).snapshots().map(
+          (doc) => doc.exists ? AppUser.fromMap(user.uid, doc.data()!) : null,
+        );
+  }
+
+  /// Update editable profile fields (name and/or role).
+  Future<void> updateProfile({String? name, UserRole? role}) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final data = <String, dynamic>{};
+    if (name != null) data['name'] = name.trim();
+    if (role != null) data['role'] = AppUser.roleToString(role);
+    if (data.isNotEmpty) {
+      await _firestore.collection('users').doc(user.uid).update(data);
+    }
   }
 }
 

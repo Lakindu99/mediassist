@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../core/services/auth_service.dart';
 import '../today/today_screen.dart';
 import '../medication/medication_list_screen.dart';
 import '../appointment/appointment_list_screen.dart';
 import '../settings/settings_screen.dart';
+import '../profile/profile_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.read<AuthService>();
     return Scaffold(
       appBar: AppBar(
         title: const Text('MediAssist', style: TextStyle(fontSize: 22)),
@@ -24,9 +22,11 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.logout, size: 26),
-            tooltip: 'Log out',
-            onPressed: () => authService.logout(),
+            icon: const Icon(Icons.person, size: 26),
+            tooltip: 'My profile',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
           ),
         ],
       ),
