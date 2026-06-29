@@ -49,4 +49,22 @@ class AdherenceService {
     final today = DateTime.now();
     await _ref.doc(doseKey(medId, today, time)).delete();
   }
+
+  /// All taken-dose logs, newest first, for the history screen.
+  Stream<List<Map<String, dynamic>>> watchAllLogs() {
+    return _ref.orderBy('takenAt', descending: true).snapshots().map(
+          (snap) => snap.docs.map((d) => d.data()).toList(),
+        );
+  }
+
+  /// Count of doses taken in the last 7 days (including today).
+  Stream<int> watchWeekCount() {
+    final now = DateTime.now();
+    final sevenDaysAgo = DateTime(now.year, now.month, now.day)
+        .subtract(const Duration(days: 6));
+    final cutoffKey = dateKey(sevenDaysAgo);
+    return _ref.snapshots().map((snap) => snap.docs
+        .where((d) => (d.data()['dateKey'] ?? '').compareTo(cutoffKey) >= 0)
+        .length);
+  }
 }

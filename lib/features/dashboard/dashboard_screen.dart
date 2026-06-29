@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../today/today_screen.dart';
 import '../medication/medication_list_screen.dart';
 import '../appointment/appointment_list_screen.dart';
+import '../history/adherence_history_screen.dart';
 import '../settings/settings_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -67,6 +68,16 @@ class DashboardScreen extends StatelessWidget {
                 color: Colors.indigo,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AppointmentListScreen()),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _DashboardTile(
+                icon: Icons.history,
+                title: 'Medication History',
+                subtitle: 'See doses you have taken',
+                color: Colors.purple,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AdherenceHistoryScreen()),
                 ),
               ),
 
