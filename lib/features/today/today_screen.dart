@@ -3,22 +3,114 @@ import 'package:intl/intl.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/services/appointment_service.dart';
 import '../../core/services/adherence_service.dart';
+import '../../core/services/notification_service.dart';
 import '../../models/medication.dart';
 import '../../models/appointment.dart';
 
-/// The most important screen for elderly users: shows ONLY what's due today —
-/// medications (with a big "Take" button) and appointments. Reduces cognitive
-/// load by removing everything not relevant right now.
-class TodayScreen extends StatelessWidget {
+/// The most important screen for elderly users: shows ONLY what's due today.
+/// On open, it also detects medications due now and reminds the user in-app
+/// (dialog + immediate notification) — reliable on all devices because it runs
+/// while the app is open, not in the background.
+class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
+  @override
+  State<TodayScreen> createState() => _TodayScreenState();
+}
+
+class _TodayScreenState extends State<TodayScreen> {
+  final MedicationService _medService = MedicationService();
+  final AppointmentService _apptService = AppointmentService();
+  final AdherenceService _adherence = AdherenceService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkDueReminders());
+  }
+
+  /// True if a dose time (today) has arrived or passed.
+  bool _isDue(String time) {
+    final now = DateTime.now();
+    final parts = time.split(':');
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+    final doseTime = DateTime(now.year, now.month, now.day, h, m);
+    return !now.isBefore(doseTime); // now >= doseTime
+  }
+
+  /// On open, find untaken doses that are due now/overdue and remind the user.
+  Future<void> _checkDueReminders() async {
+    try {
+      final meds = await _medService.watchMedications().first;
+      final taken = await _adherence.watchTakenToday().first;
+      final today = DateTime.now();
+
+      final due = <String>[];
+      for (final m in meds) {
+        for (final t in m.times) {
+          final key = AdherenceService.doseKey(m.id, today, t);
+          if (_isDue(t) && !taken.contains(key)) {
+            due.add('${m.name} at $t');
+          }
+        }
+      }
+      if (due.isEmpty || !mounted) return;
+
+      // Immediate notification — the kind that works on these devices.
+      await NotificationService.instance.showNow(
+        900,
+        'Medication reminder',
+        due.length == 1
+            ? 'It is time to take: ${due.first}'
+            : 'You have ${due.length} medications due now.',
+      );
+
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.notifications_active, color: Colors.deepOrange, size: 28),
+              SizedBox(width: 8),
+              Text('Medication due', style: TextStyle(fontSize: 20)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('These are due now. Tap "Take" on the list to mark them.',
+                  style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 12),
+              ...due.map((d) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.medication, size: 20, color: Colors.teal),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(d, style: const TextStyle(fontSize: 16))),
+                      ],
+                    ),
+                  )),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+      );
+    } catch (_) {
+      // If anything fails (e.g. offline), silently skip the reminder.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final medService = MedicationService();
-    final apptService = AppointmentService();
-    final adherence = AdherenceService();
     final today = DateTime.now();
-
     return Scaffold(
       appBar: AppBar(title: const Text('Today', style: TextStyle(fontSize: 22))),
       body: SafeArea(
@@ -32,11 +124,10 @@ class TodayScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 16, color: Colors.black54)),
             const SizedBox(height: 24),
 
-            // ---------- Medications due today ----------
             _sectionHeader(Icons.medication, 'Medications', Colors.teal),
             const SizedBox(height: 12),
             StreamBuilder<List<Medication>>(
-              stream: medService.watchMedications(),
+              stream: _medService.watchMedications(),
               builder: (context, medSnap) {
                 if (!medSnap.hasData) {
                   return const Padding(
@@ -44,7 +135,6 @@ class TodayScreen extends StatelessWidget {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                // Build today's dose list: each medication × each of its times.
                 final doses = <_Dose>[];
                 for (final m in medSnap.data!) {
                   for (final t in m.times) {
@@ -56,21 +146,23 @@ class TodayScreen extends StatelessWidget {
                   return _emptyCard('No medications scheduled for today.');
                 }
                 return StreamBuilder<Set<String>>(
-                  stream: adherence.watchTakenToday(),
+                  stream: _adherence.watchTakenToday(),
                   builder: (context, takenSnap) {
                     final taken = takenSnap.data ?? <String>{};
                     return Column(
                       children: doses.map((d) {
                         final key = AdherenceService.doseKey(d.med.id, today, d.time);
                         final isTaken = taken.contains(key);
+                        final isDue = !isTaken && _isDue(d.time);
                         return _DoseCard(
                           dose: d,
                           isTaken: isTaken,
+                          isDue: isDue,
                           onToggle: () async {
                             if (isTaken) {
-                              await adherence.undoTaken(medId: d.med.id, time: d.time);
+                              await _adherence.undoTaken(medId: d.med.id, time: d.time);
                             } else {
-                              await adherence.markTaken(
+                              await _adherence.markTaken(
                                   medId: d.med.id, medName: d.med.name, time: d.time);
                             }
                           },
@@ -83,12 +175,10 @@ class TodayScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 28),
-
-            // ---------- Appointments today ----------
             _sectionHeader(Icons.event, 'Appointments', Colors.indigo),
             const SizedBox(height: 12),
             StreamBuilder<List<Appointment>>(
-              stream: apptService.watchAppointments(),
+              stream: _apptService.watchAppointments(),
               builder: (context, snap) {
                 if (!snap.hasData) {
                   return const Padding(
@@ -143,16 +233,32 @@ class _Dose {
 class _DoseCard extends StatelessWidget {
   final _Dose dose;
   final bool isTaken;
+  final bool isDue;
   final VoidCallback onToggle;
-  const _DoseCard(
-      {required this.dose, required this.isTaken, required this.onToggle});
+  const _DoseCard({
+    required this.dose,
+    required this.isTaken,
+    required this.isDue,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
+    Color? cardColor;
+    if (isTaken) {
+      cardColor = Colors.green.shade50;
+    } else if (isDue) {
+      cardColor = Colors.orange.shade50;
+    }
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isTaken ? Colors.green.shade50 : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isDue && !isTaken
+            ? const BorderSide(color: Colors.deepOrange, width: 1.5)
+            : BorderSide.none,
+      ),
+      color: cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -169,6 +275,15 @@ class _DoseCard extends StatelessWidget {
                   if (dose.med.dosage.isNotEmpty)
                     Text(dose.med.dosage,
                         style: const TextStyle(fontSize: 15, color: Colors.black54)),
+                  if (isDue && !isTaken)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text('Due now',
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.deepOrange,
+                              fontWeight: FontWeight.bold)),
+                    ),
                 ],
               ),
             ),
