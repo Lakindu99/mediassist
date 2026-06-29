@@ -30,6 +30,16 @@ class AdherenceService {
         );
   }
 
+  /// Live set of dose keys taken today by a SPECIFIC user (used by caregivers).
+  Stream<Set<String>> watchTakenTodayFor(String uid) {
+    final key = dateKey(DateTime.now());
+    return _firestore
+        .collection('users').doc(uid).collection('doseLogs')
+        .where('dateKey', isEqualTo: key).snapshots().map(
+          (snap) => snap.docs.map((d) => d.id).toSet(),
+        );
+  }
+
   Future<void> markTaken({
     required String medId,
     required String medName,

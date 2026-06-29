@@ -5,6 +5,7 @@ import '../appointment/appointment_list_screen.dart';
 import '../history/adherence_history_screen.dart';
 import '../settings/settings_screen.dart';
 import '../profile/profile_screen.dart';
+import '../caregiver/caregiver_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -78,6 +79,16 @@ class DashboardScreen extends StatelessWidget {
                 color: Colors.purple,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AdherenceHistoryScreen()),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _DashboardTile(
+                icon: Icons.people,
+                title: 'Caregiver',
+                subtitle: 'Share access or monitor a loved one',
+                color: Colors.brown,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CaregiverScreen()),
                 ),
               ),
 

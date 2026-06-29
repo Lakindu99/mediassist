@@ -22,6 +22,15 @@ class MedicationService {
         );
   }
 
+  /// Live stream of a SPECIFIC user's medications (used by caregivers).
+  Stream<List<Medication>> watchMedicationsFor(String uid) {
+    return _firestore
+        .collection('users').doc(uid).collection('medications')
+        .orderBy('name').snapshots().map(
+          (snap) => snap.docs.map((d) => Medication.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
   Future<void> addMedication(Medication med) async {
     await _medsRef.add({
       ...med.toMap(),
