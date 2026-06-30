@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/settings_provider.dart';
+import 'core/services/adaptive_provider.dart';
 import 'features/auth/auth_gate.dart';
 
 void main() async {
@@ -13,16 +14,18 @@ void main() async {
   await NotificationService.instance.init();
   await NotificationService.instance.requestPermissions();
 
-  // Load saved accessibility settings before building (prevents flicker).
   final settings = SettingsProvider();
   await settings.load();
+  final adaptive = AdaptiveProvider();
+  await adaptive.load();
 
-  runApp(MediAssistApp(settings: settings));
+  runApp(MediAssistApp(settings: settings, adaptive: adaptive));
 }
 
 class MediAssistApp extends StatelessWidget {
   final SettingsProvider settings;
-  const MediAssistApp({super.key, required this.settings});
+  final AdaptiveProvider adaptive;
+  const MediAssistApp({super.key, required this.settings, required this.adaptive});
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +33,8 @@ class MediAssistApp extends StatelessWidget {
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider<SettingsProvider>.value(value: settings),
+        ChangeNotifierProvider<AdaptiveProvider>.value(value: adaptive),
       ],
-      // Consumer rebuilds MaterialApp whenever settings change, so text size
-      // and contrast update instantly across every screen.
       child: Consumer<SettingsProvider>(
         builder: (context, s, _) {
           return MaterialApp(
@@ -40,7 +42,6 @@ class MediAssistApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: s.highContrast ? _highContrastTheme() : _normalTheme(),
             builder: (context, child) {
-              // Apply the chosen text size across the whole app.
               return MediaQuery(
                 data: MediaQuery.of(context)
                     .copyWith(textScaler: TextScaler.linear(s.fontScale)),

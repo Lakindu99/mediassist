@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/services/adaptive_provider.dart';
 import '../today/today_screen.dart';
 import '../medication/medication_list_screen.dart';
 import '../appointment/appointment_list_screen.dart';
-import '../history/adherence_history_screen.dart';
 import '../settings/settings_screen.dart';
 import '../profile/profile_screen.dart';
+import '../history/adherence_history_screen.dart';
 import '../caregiver/caregiver_screen.dart';
+import '../researcher/researcher_panel.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final adaptiveOn = context.watch<AdaptiveProvider>().adaptiveMode;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MediAssist', style: TextStyle(fontSize: 22)),
+        // Long-press the title to open the hidden researcher panel.
+        title: GestureDetector(
+          onLongPress: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ResearcherPanel()),
+          ),
+          child: const Text('MediAssist', style: TextStyle(fontSize: 22)),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, size: 26),
@@ -41,6 +51,32 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 8),
               const Text('What would you like to do?',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              if (adaptiveOn) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.deepPurple),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 18, color: Colors.deepPurple),
+                        SizedBox(width: 6),
+                        Text('Adaptive Mode active',
+                            style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.deepPurple,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               _DashboardTile(
                 icon: Icons.today,
@@ -91,7 +127,6 @@ class DashboardScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const CaregiverScreen()),
                 ),
               ),
-
             ],
           ),
         ),
