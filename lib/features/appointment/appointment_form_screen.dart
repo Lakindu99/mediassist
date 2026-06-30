@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/services/behaviour_tracker.dart';
 import '../../core/services/appointment_service.dart';
 import '../../core/widgets/app_widgets.dart';
 import '../../models/appointment.dart';
@@ -36,6 +37,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
       _selectedDate = DateTime(e.dateTime.year, e.dateTime.month, e.dateTime.day);
       _selectedTime = TimeOfDay(hour: e.dateTime.hour, minute: e.dateTime.minute);
     }
+    if (!_isEditing) BehaviourTracker.instance.startTask('add_appointment');
   }
 
   @override
@@ -68,6 +70,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
   Future<void> _save() async {
     final doctor = _doctorController.text.trim();
     if (doctor.isEmpty) {
+      BehaviourTracker.instance.logError('appointment_field_empty');
       _showMessage('Please enter the doctor or appointment name.');
       return;
     }
@@ -97,6 +100,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
         await _service.updateAppointment(appt);
       } else {
         await _service.addAppointment(appt);
+        await BehaviourTracker.instance.endTask('add_appointment');
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {

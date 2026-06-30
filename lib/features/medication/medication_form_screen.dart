@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/behaviour_tracker.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/widgets/app_widgets.dart';
 import '../../models/medication.dart';
@@ -33,6 +34,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
       _notesController.text = existing.notes;
       _times.addAll(existing.times);
     }
+    if (!_isEditing) BehaviourTracker.instance.startTask('add_medication');
   }
 
   @override
@@ -63,6 +65,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
+      BehaviourTracker.instance.logError('medication_name_empty');
       _showMessage('Please enter the medication name.');
       return;
     }
@@ -79,6 +82,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
         await _service.updateMedication(med);
       } else {
         await _service.addMedication(med);
+        await BehaviourTracker.instance.endTask('add_medication');
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {

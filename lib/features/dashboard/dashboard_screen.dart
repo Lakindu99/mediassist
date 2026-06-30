@@ -84,7 +84,7 @@ class DashboardScreen extends StatelessWidget {
                 subtitle: 'See what is due today',
                 color: Colors.deepOrange,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const TodayScreen()),
+                  MaterialPageRoute(settings: const RouteSettings(name: 'today'), builder: (_) => const TodayScreen()),
                 ),
               ),
               const SizedBox(height: 16),
@@ -94,7 +94,7 @@ class DashboardScreen extends StatelessWidget {
                 subtitle: 'View and manage your medicines',
                 color: Colors.teal,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const MedicationListScreen()),
+                  MaterialPageRoute(settings: const RouteSettings(name: 'medications'), builder: (_) => const MedicationListScreen()),
                 ),
               ),
               const SizedBox(height: 16),
@@ -104,7 +104,7 @@ class DashboardScreen extends StatelessWidget {
                 subtitle: 'View and manage your appointments',
                 color: Colors.indigo,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AppointmentListScreen()),
+                  MaterialPageRoute(settings: const RouteSettings(name: 'appointments'), builder: (_) => const AppointmentListScreen()),
                 ),
               ),
               const SizedBox(height: 16),
@@ -114,7 +114,7 @@ class DashboardScreen extends StatelessWidget {
                 subtitle: 'See doses you have taken',
                 color: Colors.purple,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AdherenceHistoryScreen()),
+                  MaterialPageRoute(settings: const RouteSettings(name: 'history'), builder: (_) => const AdherenceHistoryScreen()),
                 ),
               ),
               const SizedBox(height: 16),
@@ -124,7 +124,7 @@ class DashboardScreen extends StatelessWidget {
                 subtitle: 'Share access or monitor a loved one',
                 color: Colors.brown,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CaregiverScreen()),
+                  MaterialPageRoute(settings: const RouteSettings(name: 'caregiver'), builder: (_) => const CaregiverScreen()),
                 ),
               ),
             ],
