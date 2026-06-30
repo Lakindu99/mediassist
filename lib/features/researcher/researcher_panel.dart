@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/services/adaptive_provider.dart';
-import '../../core/services/behaviour_tracker.dart';
 
 /// Hidden researcher panel: controls adaptiveMode AND shows the latest tracked
 /// behaviour metrics live (proof the engine is working; great for the viva).
