@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/adaptive_provider.dart';
+import '../services/adaptive_engine.dart';
 
-/// A large, high-contrast button designed for elderly users.
-/// Big tap target (60dp), large bold text. Reused everywhere so the look
-/// stays consistent — and so adaptive mode can later restyle it from one place.
+/// A large, high-contrast button for elderly users. In adaptive mode its
+/// height/tap-target grows automatically when the engine detects mis-taps.
 class AppButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -19,9 +21,11 @@ class AppButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final adaptiveOn = context.watch<AdaptiveProvider>().adaptiveMode;
+    final scale = adaptiveOn ? context.watch<AdaptiveEngine>().buttonScale : 1.0;
     return SizedBox(
       width: double.infinity,
-      height: 60, // generous, well above the 48dp minimum
+      height: 60 * scale,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -45,7 +49,7 @@ class AppButton extends StatelessWidget {
   }
 }
 
-/// A large, clearly-labelled text field for elderly users (big text, visible border).
+/// A large, clearly-labelled text field for elderly users.
 class AppTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;

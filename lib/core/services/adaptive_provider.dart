@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'behaviour_tracker.dart';
+import 'adaptive_engine.dart';
 
-/// Holds the master adaptiveMode flag — the INDEPENDENT VARIABLE of the study.
-/// Also enables/disables the BehaviourTracker so tracking only ever happens in
-/// the adaptive condition.
 class AdaptiveProvider extends ChangeNotifier {
   static const _kAdaptiveMode = 'adaptiveMode';
+  final AdaptiveEngine engine;
+  AdaptiveProvider({required this.engine});
 
   bool _adaptiveMode = false;
   bool get adaptiveMode => _adaptiveMode;
@@ -14,15 +14,20 @@ class AdaptiveProvider extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _adaptiveMode = prefs.getBool(_kAdaptiveMode) ?? false;
-    BehaviourTracker.instance.setEnabled(_adaptiveMode);
+    _apply(_adaptiveMode);
     notifyListeners();
   }
 
   Future<void> setAdaptiveMode(bool value) async {
     _adaptiveMode = value;
-    BehaviourTracker.instance.setEnabled(value);
+    _apply(value);
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kAdaptiveMode, value);
+  }
+
+  void _apply(bool v) {
+    BehaviourTracker.instance.setEnabled(v);
+    engine.setEnabled(v);
   }
 }

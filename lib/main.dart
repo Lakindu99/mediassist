@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import 'core/services/auth_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/settings_provider.dart';
 import 'core/services/adaptive_provider.dart';
+import 'core/services/adaptive_engine.dart';
 import 'core/services/behaviour_tracker.dart';
 import 'features/auth/auth_gate.dart';
 
@@ -17,16 +19,27 @@ void main() async {
 
   final settings = SettingsProvider();
   await settings.load();
-  final adaptive = AdaptiveProvider();
+
+  final engine = AdaptiveEngine();
+  final adaptive = AdaptiveProvider(engine: engine);
   await adaptive.load();
 
-  runApp(MediAssistApp(settings: settings, adaptive: adaptive));
+  // Wire the behaviour tracker to feed the adaptive engine.
+  BehaviourTracker.instance.onMetricsChanged = engine.evaluate;
+
+  runApp(MediAssistApp(settings: settings, adaptive: adaptive, engine: engine));
 }
 
 class MediAssistApp extends StatefulWidget {
   final SettingsProvider settings;
   final AdaptiveProvider adaptive;
-  const MediAssistApp({super.key, required this.settings, required this.adaptive});
+  final AdaptiveEngine engine;
+  const MediAssistApp({
+    super.key,
+    required this.settings,
+    required this.adaptive,
+    required this.engine,
+  });
 
   @override
   State<MediAssistApp> createState() => _MediAssistAppState();
@@ -47,7 +60,6 @@ class _MediAssistAppState extends State<MediAssistApp> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Save the behaviour session when the app goes to the background.
     if (state == AppLifecycleState.paused) {
       BehaviourTracker.instance.persist();
     }
@@ -60,23 +72,30 @@ class _MediAssistAppState extends State<MediAssistApp> with WidgetsBindingObserv
         Provider<AuthService>(create: (_) => AuthService()),
         ChangeNotifierProvider<SettingsProvider>.value(value: widget.settings),
         ChangeNotifierProvider<AdaptiveProvider>.value(value: widget.adaptive),
+        ChangeNotifierProvider<AdaptiveEngine>.value(value: widget.engine),
       ],
-      child: Consumer<SettingsProvider>(
-        builder: (context, s, _) {
+      child: Consumer3<SettingsProvider, AdaptiveProvider, AdaptiveEngine>(
+        builder: (context, s, adaptive, engine, _) {
+          // Effective values: adaptation is ADDITIVE — never smaller than the
+          // user's own manual choice.
+          final adaptiveOn = adaptive.adaptiveMode;
+          final fontScale =
+              adaptiveOn ? math.max(s.fontScale, engine.fontScale) : s.fontScale;
+          final highContrast =
+              s.highContrast || (adaptiveOn && engine.forceHighContrast);
+
           return MaterialApp(
             title: 'MediAssist',
             debugShowCheckedModeBanner: false,
             navigatorObservers: [BehaviourNavigatorObserver()],
-            theme: s.highContrast ? _highContrastTheme() : _normalTheme(),
+            theme: highContrast ? _highContrastTheme() : _normalTheme(),
             builder: (context, child) {
-              // Global tap listener: passively records every tap for the tracker
-              // (does not consume the event, so buttons still work normally).
               return Listener(
                 behavior: HitTestBehavior.translucent,
                 onPointerDown: (e) => BehaviourTracker.instance.logTap(e.position),
                 child: MediaQuery(
                   data: MediaQuery.of(context)
-                      .copyWith(textScaler: TextScaler.linear(s.fontScale)),
+                      .copyWith(textScaler: TextScaler.linear(fontScale)),
                   child: child!,
                 ),
               );

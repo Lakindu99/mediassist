@@ -2,32 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// The behaviour-tracking engine — the research core of MediAssist.
-///
-/// Records five interaction metrics PER SESSION, but ONLY when adaptive mode
-/// is enabled (so the static control condition is never tracked):
-///   M1 avg task-completion time   M2 error / mis-tap rate
-///   M3 hesitation frequency       M4 retry taps        M5 screen revisits
-///
-/// Data is written to users/{uid}/behaviourSessions and later (Stage 4) used
-/// to train the decision-tree classifier.
+/// A read-only snapshot of the current session's five metrics.
+class BehaviourSnapshot {
+  final double avgTaskTimeSec;
+  final double errorRate;
+  final int hesitationCount;
+  final int retryTaps;
+  final int screenRevisits;
+  const BehaviourSnapshot({
+    required this.avgTaskTimeSec,
+    required this.errorRate,
+    required this.hesitationCount,
+    required this.retryTaps,
+    required this.screenRevisits,
+  });
+  static const BehaviourSnapshot zero =
+      BehaviourSnapshot(avgTaskTimeSec: 0, errorRate: 0, hesitationCount: 0, retryTaps: 0, screenRevisits: 0);
+}
+
+/// The behaviour-tracking engine. Records five metrics per session, but ONLY
+/// when adaptive mode is enabled. Notifies a listener (the AdaptiveEngine)
+/// whenever metrics change.
 class BehaviourTracker {
   BehaviourTracker._();
   static final BehaviourTracker instance = BehaviourTracker._();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  /// Set by main.dart to the AdaptiveEngine's evaluate method.
+  void Function(BehaviourSnapshot)? onMetricsChanged;
+
   bool _enabled = false;
   bool get enabled => _enabled;
 
-  /// Turned on/off by AdaptiveProvider. Turning off clears the session so no
-  /// data leaks into the static condition.
   void setEnabled(bool value) {
     _enabled = value;
     if (!value) _resetSession();
   }
 
-  // ---- current session state ----
   String? _sessionId;
   DateTime? _sessionStart;
   int _totalActions = 0;
@@ -65,37 +77,51 @@ class BehaviourTracker {
     _lastEventLabel = null;
   }
 
-  /// Shared logic: detects hesitation (long gap) and retries (same action fast).
   void _registerActivity(String label) {
     final now = DateTime.now();
     if (_lastEventTime != null) {
       final gap = now.difference(_lastEventTime!);
-      if (gap >= _hesitationThreshold) _hesitationCount++;          // M3
-      if (label == _lastEventLabel && gap <= _retryWindow) _retryTaps++; // M4
+      if (gap >= _hesitationThreshold) _hesitationCount++;
+      if (label == _lastEventLabel && gap <= _retryWindow) _retryTaps++;
     }
     _lastEventTime = now;
     _lastEventLabel = label;
   }
 
-  /// Every tap in the app (from the global listener in main.dart).
+  double get _avgTaskTime => _taskDurations.isEmpty
+      ? 0
+      : _taskDurations.reduce((a, b) => a + b) / _taskDurations.length;
+  double get _errorRate => _totalActions == 0 ? 0 : _errorCount / _totalActions;
+
+  /// Current metrics as a snapshot (fed to the AdaptiveEngine).
+  BehaviourSnapshot get snapshot => BehaviourSnapshot(
+        avgTaskTimeSec: double.parse(_avgTaskTime.toStringAsFixed(1)),
+        errorRate: double.parse(_errorRate.toStringAsFixed(3)),
+        hesitationCount: _hesitationCount,
+        retryTaps: _retryTaps,
+        screenRevisits: _screenRevisits,
+      );
+
+  void _notify() {
+    if (_enabled) onMetricsChanged?.call(snapshot);
+  }
+
   void logTap(Offset position) {
     if (!_enabled) return;
     _ensureSession();
-    _totalActions++; // M2 denominator
-    // Coarse grid cell, so repeated taps in the same area register as retries.
-    final label = 'tap_${position.dx ~/ 40}_${position.dy ~/ 40}';
-    _registerActivity(label);
+    _totalActions++;
+    _registerActivity('tap_${position.dx ~/ 40}_${position.dy ~/ 40}');
+    _notify();
   }
 
-  /// A user error: validation failure, invalid action, etc.
   void logError(String reason) {
     if (!_enabled) return;
     _ensureSession();
-    _errorCount++; // M2 numerator
+    _errorCount++;
     _registerActivity('error_$reason');
+    _notify();
   }
 
-  /// Opening a screen — re-opening one counts as a revisit (M5).
   void logScreenOpen(String screen) {
     if (!_enabled) return;
     _ensureSession();
@@ -105,6 +131,7 @@ class BehaviourTracker {
       _visitedScreens.add(screen);
     }
     _registerActivity('screen_$screen');
+    _notify();
   }
 
   void startTask(String name) {
@@ -117,17 +144,12 @@ class BehaviourTracker {
     if (!_enabled) return;
     final start = _openTasks.remove(name);
     if (start != null) {
-      _taskDurations.add(DateTime.now().difference(start).inMilliseconds / 1000.0); // M1
+      _taskDurations.add(DateTime.now().difference(start).inMilliseconds / 1000.0);
     }
+    _notify();
     await persist();
   }
 
-  double get _avgTaskTime => _taskDurations.isEmpty
-      ? 0
-      : _taskDurations.reduce((a, b) => a + b) / _taskDurations.length;
-  double get _errorRate => _totalActions == 0 ? 0 : _errorCount / _totalActions;
-
-  /// Save/update the session summary in Firestore.
   Future<void> persist() async {
     if (!_enabled || _sessionId == null) return;
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -150,7 +172,6 @@ class BehaviourTracker {
   }
 }
 
-/// Auto-logs screen opens (for revisit detection) from named routes.
 class BehaviourNavigatorObserver extends NavigatorObserver {
   void _log(Route<dynamic>? route) {
     final name = route?.settings.name;
