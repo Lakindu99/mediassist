@@ -53,6 +53,11 @@ class BehaviourTracker {
   DateTime? _lastEventTime;
   String? _lastEventLabel;
 
+  // Rule-vs-ML comparison (recorded by the AdaptiveEngine).
+  int _ruleLevel = 0, _mlLevel = 0, _activeLevel = 0;
+  String _strategy = 'ml';
+  int _decisionCount = 0, _agreeCount = 0;
+
   static const _hesitationThreshold = Duration(seconds: 5);
   static const _retryWindow = Duration(milliseconds: 1500);
 
@@ -75,6 +80,8 @@ class BehaviourTracker {
     _openTasks.clear();
     _lastEventTime = null;
     _lastEventLabel = null;
+    _ruleLevel = 0; _mlLevel = 0; _activeLevel = 0;
+    _strategy = 'ml'; _decisionCount = 0; _agreeCount = 0;
   }
 
   void _registerActivity(String label) {
@@ -150,6 +157,16 @@ class BehaviourTracker {
     await persist();
   }
 
+  /// Stores the latest rule-based vs ML decision for the session summary.
+  void recordDecision(int rule, int ml, int active, String strategy) {
+    _ruleLevel = rule;
+    _mlLevel = ml;
+    _activeLevel = active;
+    _strategy = strategy;
+    _decisionCount++;
+    if (rule == ml) _agreeCount++;
+  }
+
   Future<void> persist() async {
     if (!_enabled || _sessionId == null) return;
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -168,6 +185,12 @@ class BehaviourTracker {
       'screenRevisits': _screenRevisits,
       'totalActions': _totalActions,
       'errorCount': _errorCount,
+      'ruleLevel': _ruleLevel,
+      'mlLevel': _mlLevel,
+      'activeLevel': _activeLevel,
+      'strategy': _strategy,
+      'ruleMlAgreements': _agreeCount,
+      'ruleMlDecisions': _decisionCount,
     }, SetOptions(merge: true));
   }
 }

@@ -1,84 +1,98 @@
 import 'package:flutter/material.dart';
 import 'behaviour_tracker.dart';
+import 'adaptive_classifier.dart';
 
-/// The rule-based Adaptive UI Engine (Phase 2, Stage 3).
+/// Which decision source drives the adaptive UI.
+enum AdaptiveStrategy { ruleBased, ml }
+
+/// The Adaptive UI Engine (Phase 2, Stages 3-4).
 ///
-/// Reads the live behaviour snapshot and applies transparent if-then rules to
-/// decide how much to adapt the interface. Outputs graded LEVELS (0/1/2) that
-/// the app maps to font size, button size, contrast and navigation. Every
-/// decision is explainable — a research virtue we contrast with ML in Stage 4.
+/// Computes an adaptation LEVEL (0 none, 1 mild, 2 strong) from the live
+/// behaviour snapshot using BOTH a transparent rule set and the trained
+/// decision-tree classifier. One strategy drives the UI (researcher-selectable);
+/// both decisions are always recorded so rule-based vs ML can be compared.
 class AdaptiveEngine extends ChangeNotifier {
   bool _enabled = false;
 
-  int fontLevel = 0;        // 0 none, 1 mild, 2 strong  (comprehension)
-  int buttonLevel = 0;      // 0 none, 1 mild, 2 strong  (motor/targeting)
-  bool forceHighContrast = false;
-  bool simplifyNav = false;
+  /// ML is the research contribution (default); the researcher can switch to
+  /// rule-based for comparison.
+  AdaptiveStrategy strategy = AdaptiveStrategy.ml;
 
-  int? _preview;                          // demo override (null = auto)
+  int activeLevel = 0; // level currently driving the UI
+  int ruleLevel = 0;   // the rule-based decision
+  int mlLevel = 0;     // the decision-tree decision
+
+  int? _preview;
   BehaviourSnapshot _last = BehaviourSnapshot.zero;
 
   void setEnabled(bool value) {
     _enabled = value;
     if (!value) {
       _preview = null;
-      _set(0, 0, false, false);
+      activeLevel = 0;
+      ruleLevel = 0;
+      mlLevel = 0;
+      notifyListeners();
     }
+  }
+
+  void setStrategy(AdaptiveStrategy s) {
+    strategy = s;
+    if (_enabled && _preview == null) {
+      activeLevel = (strategy == AdaptiveStrategy.ml) ? mlLevel : ruleLevel;
+    }
+    notifyListeners();
   }
 
   /// Called whenever behaviour metrics change (wired from BehaviourTracker).
   void evaluate(BehaviourSnapshot s) {
     _last = s;
-    if (!_enabled || _preview != null) return; // preview overrides live rules
-    _applyRules(s);
-  }
-
-  /// The transparent rule set (from the Phase 2 Technical Design, Section 7).
-  void _applyRules(BehaviourSnapshot s) {
-    int font = 0;
-    if (s.avgTaskTimeSec > 20 || s.hesitationCount >= 5) {
-      font = 2;
-    } else if (s.avgTaskTimeSec > 12) {
-      font = 1;
+    // Always compute BOTH decisions, for the rule-vs-ML comparison.
+    ruleLevel = _ruleBasedLevel(s);
+    mlLevel = AdaptiveClassifier.predict(s);
+    if (_enabled && _preview == null) {
+      activeLevel = (strategy == AdaptiveStrategy.ml) ? mlLevel : ruleLevel;
     }
-
-    int button = 0;
-    if (s.errorRate > 0.30 || s.retryTaps >= 3) {
-      button = 2;
-    } else if (s.errorRate > 0.15) {
-      button = 1;
-    }
-
-    final contrast = font >= 2;                // strong comprehension load
-    final simplify = s.screenRevisits >= 4;    // navigation difficulty
-
-    _set(font, button, contrast, simplify);
-  }
-
-  /// Demo/testing control (used in the Researcher Panel): force a level so you
-  /// can show each adaptation instantly. null = return to live rules.
-  void setPreview(int? level) {
-    _preview = level;
-    if (level == null) {
-      _applyRules(_last);
-    } else {
-      _set(level, level, level >= 2, level >= 2);
-    }
-  }
-
-  void _set(int font, int button, bool contrast, bool simplify) {
-    if (font == fontLevel &&
-        button == buttonLevel &&
-        contrast == forceHighContrast &&
-        simplify == simplifyNav) return;
-    fontLevel = font;
-    buttonLevel = button;
-    forceHighContrast = contrast;
-    simplifyNav = simplify;
+    // Record the comparison so it is saved with the session.
+    BehaviourTracker.instance
+        .recordDecision(ruleLevel, mlLevel, activeLevel, strategy.name);
     notifyListeners();
   }
 
-  // Level → concrete scale factors.
-  double get fontScale => const [1.0, 1.15, 1.35][fontLevel];
-  double get buttonScale => const [1.0, 1.15, 1.30][buttonLevel];
+  /// Transparent rule set: reduces the five metrics to a 0/1/2 level.
+  int _ruleBasedLevel(BehaviourSnapshot s) {
+    final strong = s.errorRate > 0.30 ||
+        s.retryTaps >= 3 ||
+        s.avgTaskTimeSec > 20 ||
+        s.hesitationCount >= 5 ||
+        s.screenRevisits >= 4;
+    final mild = s.errorRate > 0.15 ||
+        s.avgTaskTimeSec > 12 ||
+        s.hesitationCount >= 3 ||
+        s.screenRevisits >= 2;
+    if (strong) return 2;
+    if (mild) return 1;
+    return 0;
+  }
+
+  /// Demo/testing: force a level. null returns to live behaviour-driven rules.
+  void setPreview(int? level) {
+    _preview = level;
+    if (level == null) {
+      if (_enabled) {
+        activeLevel = (strategy == AdaptiveStrategy.ml) ? mlLevel : ruleLevel;
+      }
+    } else {
+      activeLevel = level;
+    }
+    notifyListeners();
+  }
+
+  bool get isPreviewing => _preview != null;
+
+  // Active level -> concrete UI settings.
+  double get fontScale => const [1.0, 1.15, 1.35][activeLevel];
+  double get buttonScale => const [1.0, 1.15, 1.30][activeLevel];
+  bool get forceHighContrast => activeLevel >= 2;
+  bool get simplifyNav => activeLevel >= 2;
 }
