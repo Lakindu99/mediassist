@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/settings_provider.dart';
+import '../../core/services/adaptive_provider.dart';
+import '../researcher/researcher_panel.dart';
 
-/// Lets the user adjust text size and high-contrast mode. Everything applies
-/// live, because the whole app listens to SettingsProvider.
+/// Accessibility settings (text size + high contrast), plus a clearly-marked
+/// Researcher / Advanced section that controls the adaptive experiment. The
+/// adaptive toggle lives here (discoverable in Settings) rather than only
+/// behind a hidden long-press.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
+    final adaptiveOn = context.watch<AdaptiveProvider>().adaptiveMode;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Accessibility', style: TextStyle(fontSize: 22))),
+      appBar: AppBar(title: const Text('Settings', style: TextStyle(fontSize: 22))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -61,6 +67,56 @@ class SettingsScreen extends StatelessWidget {
                     context.read<SettingsProvider>().setHighContrast(v),
               ),
             ),
+
+            // ---------- Researcher / Advanced ----------
+            const SizedBox(height: 40),
+            const Divider(thickness: 1),
+            const SizedBox(height: 12),
+            Row(
+              children: const [
+                Icon(Icons.science, color: Colors.deepPurple, size: 24),
+                SizedBox(width: 8),
+                Text('Researcher / Advanced',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'For research use. Controls the adaptive study condition. Leave off for '
+              'the standard app.',
+              style: TextStyle(fontSize: 14, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: Colors.deepPurple.shade50,
+              child: SwitchListTile(
+                title: const Text('Adaptive Mode',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                  adaptiveOn
+                      ? 'On — the interface adapts to the user (Adaptive condition).'
+                      : 'Off — standard interface (Static control condition).',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                secondary: const Icon(Icons.auto_awesome, color: Colors.deepPurple),
+                value: adaptiveOn,
+                onChanged: (v) => context.read<AdaptiveProvider>().setAdaptiveMode(v),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 52,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.tune),
+                label: const Text('Open Researcher Panel',
+                    style: TextStyle(fontSize: 16)),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ResearcherPanel()),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
