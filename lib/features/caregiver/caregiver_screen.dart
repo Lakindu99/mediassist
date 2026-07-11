@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:intl/intl.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/caregiver_service.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/services/adherence_service.dart';
 import '../../core/services/tts_service.dart';
+import '../../core/services/appointment_service.dart';
 import '../../models/app_user.dart';
 import '../../models/medication.dart';
+import '../../models/appointment.dart';
 
 /// One screen, two roles: an elderly user sees their share code; a caregiver
 /// links to an elderly user and monitors today's medication status.
@@ -447,6 +450,65 @@ class _MonitorView extends StatelessWidget {
                   ],
                 );
               },
+            );
+          },
+        ),
+        const SizedBox(height: 28),
+        Row(
+          children: const [
+            Icon(Icons.event, color: Colors.indigo, size: 24),
+            SizedBox(width: 8),
+            Text('Appointments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<Appointment>>(
+          stream: AppointmentService().watchAppointmentsFor(elderlyUid),
+          builder: (context, snap) {
+            if (!snap.hasData) {
+              return const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final now = DateTime.now();
+            final upcoming = snap.data!
+                .where((a) => a.dateTime.isAfter(DateTime(now.year, now.month, now.day)))
+                .toList();
+            if (upcoming.isEmpty) {
+              return const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No upcoming appointments.', style: TextStyle(fontSize: 15)),
+                ),
+              );
+            }
+            return Column(
+              children: upcoming.map((a) {
+                final isToday = a.dateTime.year == now.year &&
+                    a.dateTime.month == now.month &&
+                    a.dateTime.day == now.day;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  color: isToday ? Colors.indigo.shade50 : null,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    leading: const Icon(Icons.medical_services, color: Colors.indigo, size: 28),
+                    title: Text(a.doctor,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      '${DateFormat('EEE, d MMM').format(a.dateTime)} at ${DateFormat('h:mm a').format(a.dateTime)}'
+                      '${a.location.isNotEmpty ? '\n${a.location}' : ''}',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    isThreeLine: a.location.isNotEmpty,
+                    trailing: isToday
+                        ? const Text('Today',
+                            style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold))
+                        : null,
+                  ),
+                );
+              }).toList(),
             );
           },
         ),

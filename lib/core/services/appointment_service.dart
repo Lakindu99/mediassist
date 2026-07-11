@@ -20,6 +20,19 @@ class AppointmentService {
         );
   }
 
+  /// Live stream of a SPECIFIC user's appointments (used by caregivers).
+  Stream<List<Appointment>> watchAppointmentsFor(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('appointments')
+        .orderBy('dateTime')
+        .snapshots()
+        .map(
+          (snap) => snap.docs.map((d) => Appointment.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
   Future<void> addAppointment(Appointment appt) async {
     await _ref.add({
       ...appt.toMap(),
