@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/services/appointment_service.dart';
 import '../../core/services/adherence_service.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/tts_service.dart';
+import '../../core/services/adaptive_provider.dart';
+import '../../core/services/adaptive_engine.dart';
 import '../../models/medication.dart';
 import '../../models/appointment.dart';
 
 /// The most important screen for elderly users: shows ONLY what's due today.
-/// On open, it also detects medications due now and reminds the user in-app
-/// (dialog + immediate notification) — reliable on all devices because it runs
-/// while the app is open, not in the background.
+/// Includes a "Read aloud" button (text-to-speech) for users with weak
+/// eyesight; in adaptive mode, when the engine detects the user is struggling,
+/// the plan is read out automatically on open.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
   @override
@@ -25,20 +29,82 @@ class _TodayScreenState extends State<TodayScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkDueReminders());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDueReminders();
+      // Adaptive tie-in: if the engine has escalated to strong adaptation,
+      // read the plan aloud automatically to support the struggling user.
+      final on = context.read<AdaptiveProvider>().adaptiveMode;
+      final strong = on && context.read<AdaptiveEngine>().activeLevel >= 2;
+      if (strong) _readPlanAloud();
+    });
   }
 
-  /// True if a dose time (today) has arrived or passed.
+  @override
+  void dispose() {
+    TtsService.instance.stop();
+    super.dispose();
+  }
+
   bool _isDue(String time) {
     final now = DateTime.now();
     final parts = time.split(':');
     final h = int.tryParse(parts[0]) ?? 0;
     final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-    final doseTime = DateTime(now.year, now.month, now.day, h, m);
-    return !now.isBefore(doseTime); // now >= doseTime
+    return !now.isBefore(DateTime(now.year, now.month, now.day, h, m));
   }
 
-  /// On open, find untaken doses that are due now/overdue and remind the user.
+  /// Turn "08:30" into a spoken form like "8 30 A M".
+  String _spokenTime(String hhmm) {
+    final p = hhmm.split(':');
+    final h = int.tryParse(p[0]) ?? 0;
+    final m = int.tryParse(p.length > 1 ? p[1] : '0') ?? 0;
+    final ampm = h < 12 ? 'A M' : 'P M';
+    final h12 = h % 12 == 0 ? 12 : h % 12;
+    return m == 0 ? '$h12 $ampm' : '$h12 ${m.toString().padLeft(2, '0')} $ampm';
+  }
+
+  /// Compose a friendly spoken summary of today's plan and read it aloud.
+  Future<void> _readPlanAloud() async {
+    try {
+      final meds = await _medService.watchMedications().first;
+      final appts = await _apptService.watchAppointments().first;
+      final today = DateTime.now();
+
+      final buffer = StringBuffer('Here is your plan for today. ');
+      final doses = <_Dose>[];
+      for (final m in meds) {
+        for (final t in m.times) {
+          doses.add(_Dose(med: m, time: t));
+        }
+      }
+      doses.sort((a, b) => a.time.compareTo(b.time));
+
+      if (doses.isEmpty) {
+        buffer.write('You have no medications scheduled today. ');
+      } else {
+        buffer.write('Your medicines. ');
+        for (final d in doses) {
+          final dosage = d.med.dosage.isNotEmpty ? ', ${d.med.dosage}, ' : ', ';
+          buffer.write('${d.med.name}$dosage at ${_spokenTime(d.time)}. ');
+        }
+      }
+
+      final todays = appts.where((a) =>
+          a.dateTime.year == today.year &&
+          a.dateTime.month == today.month &&
+          a.dateTime.day == today.day).toList();
+      if (todays.isNotEmpty) {
+        buffer.write('Your appointments. ');
+        for (final a in todays) {
+          buffer.write('${a.doctor} at ${DateFormat('h:mm a').format(a.dateTime)}. ');
+        }
+      }
+      await TtsService.instance.speak(buffer.toString());
+    } catch (_) {
+      // Ignore read-aloud failures (e.g. offline); it's a non-critical aid.
+    }
+  }
+
   Future<void> _checkDueReminders() async {
     try {
       final meds = await _medService.watchMedications().first;
@@ -56,7 +122,6 @@ class _TodayScreenState extends State<TodayScreen> {
       }
       if (due.isEmpty || !mounted) return;
 
-      // Immediate notification — the kind that works on these devices.
       await NotificationService.instance.showNow(
         900,
         'Medication reminder',
@@ -103,22 +168,42 @@ class _TodayScreenState extends State<TodayScreen> {
           ],
         ),
       );
-    } catch (_) {
-      // If anything fails (e.g. offline), silently skip the reminder.
-    }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
     return Scaffold(
-      appBar: AppBar(title: const Text('Today', style: TextStyle(fontSize: 22))),
+      appBar: AppBar(
+        title: const Text('Today', style: TextStyle(fontSize: 22)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.volume_up, size: 28),
+            tooltip: 'Read aloud',
+            onPressed: _readPlanAloud,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text(DateFormat('EEEE, d MMMM').format(today),
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(DateFormat('EEEE, d MMMM').format(today),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                ),
+                // Prominent read-aloud button (elderly-friendly, clearly labelled).
+                TextButton.icon(
+                  onPressed: _readPlanAloud,
+                  icon: const Icon(Icons.volume_up, size: 24),
+                  label: const Text('Listen', style: TextStyle(fontSize: 16)),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
             const Text('Here is your plan for today.',
                 style: TextStyle(fontSize: 16, color: Colors.black54)),
