@@ -10,6 +10,7 @@ import '../profile/profile_screen.dart';
 import '../history/adherence_history_screen.dart';
 import '../caregiver/caregiver_screen.dart';
 import '../researcher/researcher_panel.dart';
+import '../../core/widgets/adaptive_recommendation_banner.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -64,6 +65,7 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ],
+              const AdaptiveRecommendationBanner(),
               const SizedBox(height: 20),
               _DashboardTile(
                 icon: Icons.today,

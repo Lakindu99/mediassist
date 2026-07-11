@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/services/adaptive_provider.dart';
 import '../../core/services/adaptive_engine.dart';
+import 'adaptation_log_screen.dart';
 
 /// Hidden researcher panel: controls adaptiveMode & strategy, shows the live
 /// rule-based vs ML comparison, preview controls, and the tracked metrics.
@@ -119,6 +120,14 @@ class ResearcherPanel extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AdaptationLogScreen())),
+              icon: const Icon(Icons.list_alt),
+              label: const Text('View adaptation log', style: TextStyle(fontSize: 15)),
+            ),
+            const SizedBox(height: 20),
 
             const Text('Preview adaptation (demo)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
