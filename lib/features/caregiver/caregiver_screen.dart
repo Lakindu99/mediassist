@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/caregiver_service.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/services/adherence_service.dart';
+import '../../core/services/tts_service.dart';
 import '../../models/app_user.dart';
 import '../../models/medication.dart';
 
@@ -34,77 +37,143 @@ class CaregiverScreen extends StatelessWidget {
   }
 }
 
-// ---------- ELDERLY: show/generate a share code ----------
+// ---------- ELDERLY: show/generate a share code, and send it ----------
 class _ElderlyShareView extends StatelessWidget {
   const _ElderlyShareView();
 
   @override
   Widget build(BuildContext context) {
     final service = CaregiverService();
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Icon(Icons.family_restroom, size: 70, color: Colors.teal),
-          const SizedBox(height: 16),
-          const Text('Share with your caregiver',
+    return StreamBuilder<String?>(
+      stream: service.watchMyShareCode(),
+      builder: (context, snap) {
+        final code = snap.data;
+        return ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const Icon(Icons.family_restroom, size: 70, color: Colors.teal),
+            const SizedBox(height: 16),
+            const Text('Share with your caregiver',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text(
+              'Give this code to your caregiver. They can then see your medicines '
+              'and appointments, and whether you have taken your medicines.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text(
-            'Give this code to your caregiver. They can then see your medicines and whether you have taken them.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.black54),
-          ),
-          const SizedBox(height: 28),
-          StreamBuilder<String?>(
-            stream: service.watchMyShareCode(),
-            builder: (context, snap) {
-              final code = snap.data;
-              return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                color: Colors.teal.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      const Text('Your code', style: TextStyle(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(
-                        code ?? '——————',
-                        style: const TextStyle(
-                            fontSize: 38,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 6,
-                            color: Colors.teal),
-                      ),
-                    ],
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+            const SizedBox(height: 28),
+            Card(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              color: Colors.teal.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    const Text('Your code', style: TextStyle(fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Text(
+                      code ?? '——————',
+                      style: const TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 6,
+                          color: Colors.teal),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Send / Read aloud / Copy — only shown once a code exists.
+            if (code != null) ...[
+              Builder(
+                builder: (btnContext) => SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.share),
+                    label: const Text('Send to caregiver', style: TextStyle(fontSize: 17)),
+                    onPressed: () => _shareCode(btnContext, code),
                   ),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 56,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.refresh),
-              label: const Text('Generate / Refresh code', style: TextStyle(fontSize: 17)),
-              onPressed: () async {
-                await service.generateShareCode();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('New code generated.', style: TextStyle(fontSize: 15))),
-                  );
-                }
-              },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.volume_up),
+                      label: const Text('Read aloud', style: TextStyle(fontSize: 16)),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      onPressed: () => _readCode(code),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.copy),
+                      label: const Text('Copy', style: TextStyle(fontSize: 16)),
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                      onPressed: () => _copyCode(context, code),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            SizedBox(
+              height: 56,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: Text(code == null ? 'Generate code' : 'Generate new code',
+                    style: const TextStyle(fontSize: 17)),
+                onPressed: () async {
+                  await service.generateShareCode();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('New code generated.',
+                          style: TextStyle(fontSize: 15))),
+                    );
+                  }
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> _shareCode(BuildContext context, String code) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+    final message =
+        'Hello! Please connect to my MediAssist app to help me manage my medicines '
+        'and appointments.\n\nMy code is: $code\n\n'
+        'In MediAssist, open Caregiver and enter this code.';
+    await SharePlus.instance.share(ShareParams(
+      text: message,
+      subject: 'My MediAssist caregiver code',
+      sharePositionOrigin: origin,
+    ));
+  }
+
+  Future<void> _readCode(String code) async {
+    final spoken = code.split('').join(', '); // read each character clearly
+    await TtsService.instance.speak('Your caregiver code is: $spoken');
+  }
+
+  Future<void> _copyCode(BuildContext context, String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Code copied to clipboard.',
+            style: TextStyle(fontSize: 15))),
+      );
+    }
   }
 }
 
