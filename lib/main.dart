@@ -9,6 +9,7 @@ import 'core/services/settings_provider.dart';
 import 'core/services/adaptive_provider.dart';
 import 'core/services/adaptive_engine.dart';
 import 'core/services/behaviour_tracker.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/auth_gate.dart';
 
 void main() async {
@@ -24,7 +25,6 @@ void main() async {
   final adaptive = AdaptiveProvider(engine: engine);
   await adaptive.load();
 
-  // Wire the behaviour tracker to feed the adaptive engine.
   BehaviourTracker.instance.onMetricsChanged = engine.evaluate;
 
   runApp(MediAssistApp(settings: settings, adaptive: adaptive, engine: engine));
@@ -76,8 +76,6 @@ class _MediAssistAppState extends State<MediAssistApp> with WidgetsBindingObserv
       ],
       child: Consumer3<SettingsProvider, AdaptiveProvider, AdaptiveEngine>(
         builder: (context, s, adaptive, engine, _) {
-          // Effective values: adaptation is ADDITIVE — never smaller than the
-          // user's own manual choice.
           final adaptiveOn = adaptive.adaptiveMode;
           final fontScale =
               adaptiveOn ? math.max(s.fontScale, engine.fontScale) : s.fontScale;
@@ -88,7 +86,7 @@ class _MediAssistAppState extends State<MediAssistApp> with WidgetsBindingObserv
             title: 'MediAssist',
             debugShowCheckedModeBanner: false,
             navigatorObservers: [BehaviourNavigatorObserver()],
-            theme: highContrast ? _highContrastTheme() : _normalTheme(),
+            theme: highContrast ? buildHighContrastTheme() : buildAppTheme(),
             builder: (context, child) {
               return Listener(
                 behavior: HitTestBehavior.translucent,
@@ -104,26 +102,6 @@ class _MediAssistAppState extends State<MediAssistApp> with WidgetsBindingObserv
           );
         },
       ),
-    );
-  }
-
-  ThemeData _normalTheme() =>
-      ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true);
-
-  ThemeData _highContrastTheme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: Colors.black,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: Colors.black,
-      onPrimary: Colors.white,
-      surface: Colors.white,
-      onSurface: Colors.black,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: Colors.white,
     );
   }
 }
