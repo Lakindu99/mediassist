@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/appointment_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/feedback_helpers.dart';
 import '../../core/widgets/state_widgets.dart';
 import '../../models/appointment.dart';
 import 'appointment_form_screen.dart';
@@ -150,29 +151,13 @@ class _AppointmentCard extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete appointment?', style: TextStyle(fontSize: 20)),
-        content: Text(
-          'Are you sure you want to delete the appointment with "${appointment.doctor}"? This cannot be undone.',
-          style: const TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(fontSize: 16)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete',
-                style: TextStyle(fontSize: 16, color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await service.deleteAppointment(appointment.id);
-    }
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await confirmAction(context,
+        title: 'Delete this appointment?',
+        message: 'This will remove it from your appointments.',
+        confirmLabel: 'Delete', isDestructive: true);
+    if (!ok) return;
+    await service.deleteAppointment(appointment.id);
+    showSuccessSnack(messenger, 'Appointment deleted');
   }
 }

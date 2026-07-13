@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/behaviour_tracker.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/widgets/app_widgets.dart';
+import '../../core/widgets/feedback_helpers.dart';
 import '../../models/medication.dart';
 
 /// Form to add a new medication or edit an existing one.
@@ -63,6 +64,8 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
   }
 
   Future<void> _save() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       BehaviourTracker.instance.logError('medication_name_empty');
@@ -84,7 +87,10 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
         await _service.addMedication(med);
         await BehaviourTracker.instance.endTask('add_medication');
       }
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        showSuccessSnack(messenger, _isEditing ? 'Medicine updated' : 'Medicine saved');
+        navigator.pop();
+      }
     } catch (e) {
       _showMessage('Could not save. Please try again.');
     } finally {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/feedback_helpers.dart';
 import '../../core/widgets/state_widgets.dart';
 import '../../models/medication.dart';
 import 'medication_form_screen.dart';
@@ -140,29 +141,13 @@ class _MedicationCard extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete medication?', style: TextStyle(fontSize: 20)),
-        content: Text(
-          'Are you sure you want to delete "${medication.name}"? This cannot be undone.',
-          style: const TextStyle(fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(fontSize: 16)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete',
-                style: TextStyle(fontSize: 16, color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await service.deleteMedication(medication.id);
-    }
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await confirmAction(context,
+        title: 'Delete this medicine?',
+        message: 'This will remove it from your list. You can add it again later.',
+        confirmLabel: 'Delete', isDestructive: true);
+    if (!ok) return;
+    await service.deleteMedication(medication.id);
+    showSuccessSnack(messenger, 'Medicine deleted');
   }
 }

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../core/services/behaviour_tracker.dart';
 import '../../core/services/appointment_service.dart';
 import '../../core/widgets/app_widgets.dart';
+import '../../core/widgets/feedback_helpers.dart';
 import '../../models/appointment.dart';
 
 /// Form to add a new appointment or edit an existing one.
@@ -68,6 +69,8 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
   }
 
   Future<void> _save() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final doctor = _doctorController.text.trim();
     if (doctor.isEmpty) {
       BehaviourTracker.instance.logError('appointment_field_empty');
@@ -102,7 +105,10 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
         await _service.addAppointment(appt);
         await BehaviourTracker.instance.endTask('add_appointment');
       }
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        showSuccessSnack(messenger, _isEditing ? 'Appointment updated' : 'Appointment saved');
+        navigator.pop();
+      }
     } catch (e) {
       _showMessage('Could not save. Please try again.');
     } finally {
