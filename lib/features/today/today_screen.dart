@@ -10,6 +10,7 @@ import '../../core/services/adaptive_provider.dart';
 import '../../core/services/adaptive_engine.dart';
 import '../../models/medication.dart';
 import '../../models/appointment.dart';
+import '../../core/theme/app_theme.dart';
 
 /// The most important screen for elderly users: shows ONLY what's due today.
 /// Includes a "Read aloud" button (text-to-speech) for users with weak
@@ -206,7 +207,7 @@ class _TodayScreenState extends State<TodayScreen> {
             ),
             const SizedBox(height: 4),
             const Text('Here is your plan for today.',
-                style: TextStyle(fontSize: 16, color: Colors.black54)),
+                style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
             const SizedBox(height: 24),
 
             _sectionHeader(Icons.medication, 'Medications', Colors.teal),
@@ -303,7 +304,7 @@ class _TodayScreenState extends State<TodayScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Text(message, style: const TextStyle(fontSize: 16, color: Colors.black54)),
+        child: Text(message, style: const TextStyle(fontSize: 16, color: AppColors.textSecondary)),
       ),
     );
   }
@@ -359,7 +360,7 @@ class _DoseCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   if (dose.med.dosage.isNotEmpty)
                     Text(dose.med.dosage,
-                        style: const TextStyle(fontSize: 15, color: Colors.black54)),
+                        style: const TextStyle(fontSize: 15, color: AppColors.textSecondary)),
                   if (isDue && !isTaken)
                     const Padding(
                       padding: EdgeInsets.only(top: 4),
@@ -418,10 +419,10 @@ class _TodayAppointmentCard extends StatelessWidget {
                   Text(appointment.doctor,
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   Text(timeText,
-                      style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                      style: const TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                   if (appointment.location.isNotEmpty)
                     Text(appointment.location,
-                        style: const TextStyle(fontSize: 15, color: Colors.black54)),
+                        style: const TextStyle(fontSize: 15, color: AppColors.textSecondary)),
                 ],
               ),
             ),

@@ -21,6 +21,12 @@ class AppRadius {
 class AppColors {
   static const Color teal = Color(0xFF00897B);
   static const Color ink = Color(0xFF1A2327);
+
+  /// Readable secondary text — darker & more legible than black54, while
+  /// staying clearly lighter than primary ink (preserves hierarchy). Improves
+  /// baseline readability without enlarging text or triggering high-contrast.
+  static const Color textSecondary = Color(0xFF4F5B62);
+
   static const Color background = Color(0xFFF4F7F6);
 
   static const Color today = Color(0xFFEF6C00);        // orange

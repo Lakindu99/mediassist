@@ -143,7 +143,7 @@ class _AppointmentCard extends StatelessWidget {
   Widget _infoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.black54),
+        Icon(icon, size: 20, color: AppColors.textSecondary),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 16))),
       ],

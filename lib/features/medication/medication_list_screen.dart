@@ -89,7 +89,7 @@ class _MedicationCard extends StatelessWidget {
                           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                       if (medication.dosage.isNotEmpty)
                         Text(medication.dosage,
-                            style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                            style: const TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                     ],
                   ),
                 ),

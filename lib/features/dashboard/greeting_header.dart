@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../models/app_user.dart';
+import '../../core/theme/app_theme.dart';
 
 /// A warm, personalised greeting at the top of the dashboard, to help the user
 /// feel oriented and welcomed ("Good morning, Nimal"). Falls back to a plain
@@ -50,7 +51,7 @@ class _GreetingHeaderState extends State<GreetingHeader> {
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
         const Text('What would you like to do?',
-            style: TextStyle(fontSize: 16, color: Colors.black54)),
+            style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
       ],
     );
   }

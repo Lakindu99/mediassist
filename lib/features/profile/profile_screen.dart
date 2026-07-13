@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../models/app_user.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Shows the user's profile (name, email, role), lets them edit their name and
 /// role, and log out. Uses a live stream so edits appear instantly.
@@ -101,7 +102,7 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   const SizedBox(height: 2),
                   Text(value,
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),

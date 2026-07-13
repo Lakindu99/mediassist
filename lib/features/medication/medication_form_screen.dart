@@ -4,6 +4,7 @@ import '../../core/services/medication_service.dart';
 import '../../core/widgets/app_widgets.dart';
 import '../../core/widgets/feedback_helpers.dart';
 import '../../models/medication.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Form to add a new medication or edit an existing one.
 /// If 'existing' is provided, it's edit mode; otherwise it's add mode.
@@ -132,7 +133,7 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
               const SizedBox(height: 8),
               if (_times.isEmpty)
                 const Text('No times added yet.',
-                    style: TextStyle(fontSize: 15, color: Colors.black54)),
+                    style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,

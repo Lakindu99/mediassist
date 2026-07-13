@@ -5,6 +5,7 @@ import '../../core/services/appointment_service.dart';
 import '../../core/widgets/app_widgets.dart';
 import '../../core/widgets/feedback_helpers.dart';
 import '../../models/appointment.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Form to add a new appointment or edit an existing one.
 /// If 'existing' is provided, it's edit mode; otherwise add mode.
@@ -205,7 +206,7 @@ class _AppointmentFormScreenState extends State<AppointmentFormScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                 const SizedBox(height: 2),
                 Text(value, style: const TextStyle(fontSize: 18)),
               ],

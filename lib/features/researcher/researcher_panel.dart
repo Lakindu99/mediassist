@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/services/adaptive_provider.dart';
 import '../../core/services/adaptive_engine.dart';
 import 'adaptation_log_screen.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Hidden researcher panel: controls adaptiveMode & strategy, shows the live
 /// rule-based vs ML comparison, preview controls, and the tracked metrics.
@@ -113,7 +114,7 @@ class ResearcherPanel extends StatelessWidget {
                     Text(
                       'Driving the UI: level ${engine.activeLevel}'
                       '${engine.isPreviewing ? "  (preview)" : ""}',
-                      style: const TextStyle(fontSize: 14, color: Colors.black54),
+                      style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -208,7 +209,7 @@ class ResearcherPanel extends StatelessWidget {
           if (active)
             const Padding(
               padding: EdgeInsets.only(top: 4),
-              child: Text('driving UI', style: TextStyle(fontSize: 11, color: Colors.black54)),
+              child: Text('driving UI', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             ),
         ],
       ),

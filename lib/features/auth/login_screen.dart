@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/widgets/app_widgets.dart';
 import 'register_screen.dart';
+import '../../core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -64,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               const Text('Please log in to continue',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, color: Colors.black54)),
+                  style: TextStyle(fontSize: 18, color: AppColors.textSecondary)),
               const SizedBox(height: 36),
               AppTextField(
                 controller: _emailController,

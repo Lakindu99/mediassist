@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/services/adherence_service.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Shows a history of medication doses the user has marked as taken, with a
 /// simple weekly summary. Data comes from the doseLogs the Today screen writes.
@@ -74,7 +75,7 @@ class AdherenceHistoryScreen extends StatelessWidget {
                             Text(
                               'When you mark medicines as taken on the Today screen, they will appear here.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16, color: Colors.black54),
+                              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
                             ),
                           ],
                         ),
@@ -108,7 +109,7 @@ class AdherenceHistoryScreen extends StatelessWidget {
                           subtitle: Text('Scheduled for $time',
                               style: const TextStyle(fontSize: 15)),
                           trailing: Text(takenText,
-                              style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                         ),
                       );
                     },

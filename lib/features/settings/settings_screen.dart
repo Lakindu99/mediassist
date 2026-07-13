@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/services/settings_provider.dart';
 import '../../core/services/adaptive_provider.dart';
 import '../researcher/researcher_panel.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Accessibility settings (text size + high contrast), plus a clearly-marked
 /// Researcher / Advanced section that controls the adaptive experiment. The
@@ -37,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             const Text('Choose a comfortable reading size.',
-                style: TextStyle(fontSize: 15, color: Colors.black54)),
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -54,7 +55,7 @@ class SettingsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             const Text('Makes text and colours easier to see.',
-                style: TextStyle(fontSize: 15, color: Colors.black54)),
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
             const SizedBox(height: 12),
             Card(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -84,7 +85,7 @@ class SettingsScreen extends StatelessWidget {
             const Text(
               'For research use. Controls the adaptive study condition. Leave off for '
               'the standard app.',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
             Card(

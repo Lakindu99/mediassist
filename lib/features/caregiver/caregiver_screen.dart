@@ -12,6 +12,7 @@ import '../../core/services/appointment_service.dart';
 import '../../models/app_user.dart';
 import '../../models/medication.dart';
 import '../../models/appointment.dart';
+import '../../core/theme/app_theme.dart';
 
 /// One screen, two roles: an elderly user sees their share code; a caregiver
 /// links to an elderly user and monitors today's medication status.
@@ -64,7 +65,7 @@ class _ElderlyShareView extends StatelessWidget {
               'Give this code to your caregiver. They can then see your medicines '
               'and appointments, and whether you have taken your medicines.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.black54),
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 28),
             Card(
@@ -250,7 +251,7 @@ class _LinkFormState extends State<_LinkForm> {
           const Text(
             'Ask the elderly person to open MediAssist → Caregiver, and read you their code. Enter it below.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.black54),
+            style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 28),
           TextField(
@@ -329,7 +330,7 @@ class _MonitorView extends StatelessWidget {
                   Text(elderlyName,
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const Text('Monitoring today',
-                      style: TextStyle(fontSize: 15, color: Colors.black54)),
+                      style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
                 ],
               ),
             ),

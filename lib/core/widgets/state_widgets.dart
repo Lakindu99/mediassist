@@ -46,7 +46,7 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: Colors.black54)),
+                style: const TextStyle(fontSize: 16, color: AppColors.textSecondary)),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
               ElevatedButton.icon(
@@ -76,7 +76,7 @@ class LoadingState extends StatelessWidget {
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: AppSpacing.md),
-          Text(message, style: const TextStyle(fontSize: 15, color: Colors.black54)),
+          Text(message, style: const TextStyle(fontSize: 15, color: AppColors.textSecondary)),
         ],
       ),
     );

@@ -12,6 +12,7 @@ import '../caregiver/caregiver_screen.dart';
 import '../researcher/researcher_panel.dart';
 import 'greeting_header.dart';
 import '../../core/widgets/adaptive_recommendation_banner.dart';
+import '../../core/theme/app_theme.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -192,7 +193,7 @@ class _DashboardTile extends StatelessWidget {
                     if (!simplified) ...[
                       const SizedBox(height: 4),
                       Text(subtitle,
-                          style: const TextStyle(fontSize: 15, color: Colors.black54)),
+                          style: const TextStyle(fontSize: 15, color: AppColors.textSecondary)),
                     ],
                   ],
                 ),
