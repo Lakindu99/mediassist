@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/medication_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/state_widgets.dart';
 import '../../models/medication.dart';
 import 'medication_form_screen.dart';
 
@@ -11,12 +13,13 @@ class MedicationListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = MedicationService();
+    void addMedication() => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MedicationFormScreen()),
+        );
     return Scaffold(
       appBar: AppBar(title: const Text('My Medications', style: TextStyle(fontSize: 22))),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const MedicationFormScreen()),
-        ),
+        onPressed: addMedication,
         icon: const Icon(Icons.add),
         label: const Text('Add', style: TextStyle(fontSize: 18)),
       ),
@@ -24,7 +27,7 @@ class MedicationListScreen extends StatelessWidget {
         stream: service.watchMedications(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(message: 'Loading your medicines…');
           }
           if (snapshot.hasError) {
             return const Center(
@@ -36,7 +39,16 @@ class MedicationListScreen extends StatelessWidget {
             );
           }
           final meds = snapshot.data ?? [];
-          if (meds.isEmpty) return _emptyState();
+          if (meds.isEmpty) {
+            return EmptyState(
+              icon: Icons.medication,
+              accent: AppColors.medications,
+              title: 'No medicines yet',
+              message: 'Add your first medicine to start tracking your daily doses.',
+              actionLabel: 'Add medicine',
+              onAction: addMedication,
+            );
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: meds.length,
@@ -44,27 +56,6 @@ class MedicationListScreen extends StatelessWidget {
                 _MedicationCard(medication: meds[index], service: service),
           );
         },
-      ),
-    );
-  }
-
-  Widget _emptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.medication_outlined, size: 90, color: Colors.teal),
-          SizedBox(height: 16),
-          Text('No medications yet',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Text('Tap the "Add" button to add your first medication.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 17, color: Colors.black54)),
-          ),
-        ],
       ),
     );
   }

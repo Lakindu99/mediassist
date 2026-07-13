@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/appointment_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/state_widgets.dart';
 import '../../models/appointment.dart';
 import 'appointment_form_screen.dart';
 
@@ -11,12 +13,13 @@ class AppointmentListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = AppointmentService();
+    void addAppointment() => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AppointmentFormScreen()),
+        );
     return Scaffold(
       appBar: AppBar(title: const Text('My Appointments', style: TextStyle(fontSize: 22))),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AppointmentFormScreen()),
-        ),
+        onPressed: addAppointment,
         icon: const Icon(Icons.add),
         label: const Text('Add', style: TextStyle(fontSize: 18)),
       ),
@@ -24,7 +27,7 @@ class AppointmentListScreen extends StatelessWidget {
         stream: service.watchAppointments(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(message: 'Loading your appointments…');
           }
           if (snapshot.hasError) {
             return const Center(
@@ -36,7 +39,16 @@ class AppointmentListScreen extends StatelessWidget {
             );
           }
           final appts = snapshot.data ?? [];
-          if (appts.isEmpty) return _emptyState();
+          if (appts.isEmpty) {
+            return EmptyState(
+              icon: Icons.event,
+              accent: AppColors.appointments,
+              title: 'No appointments yet',
+              message: 'Add an appointment to keep track of your doctor visits.',
+              actionLabel: 'Add appointment',
+              onAction: addAppointment,
+            );
+          }
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: appts.length,
@@ -44,27 +56,6 @@ class AppointmentListScreen extends StatelessWidget {
                 _AppointmentCard(appointment: appts[index], service: service),
           );
         },
-      ),
-    );
-  }
-
-  Widget _emptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.event_available, size: 90, color: Colors.indigo),
-          SizedBox(height: 16),
-          Text('No appointments yet',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
-            child: Text('Tap the "Add" button to add your first appointment.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 17, color: Colors.black54)),
-          ),
-        ],
       ),
     );
   }
