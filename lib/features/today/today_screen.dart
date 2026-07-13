@@ -176,7 +176,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final today = DateTime.now();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Today', style: TextStyle(fontSize: 22)),
+        title: const Text("Today's Plan", style: TextStyle(fontSize: 22)),
         actions: [
           IconButton(
             icon: const Icon(Icons.volume_up, size: 28),

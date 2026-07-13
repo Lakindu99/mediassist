@@ -10,6 +10,7 @@ import '../profile/profile_screen.dart';
 import '../history/adherence_history_screen.dart';
 import '../caregiver/caregiver_screen.dart';
 import '../researcher/researcher_panel.dart';
+import 'greeting_header.dart';
 import '../../core/widgets/adaptive_recommendation_banner.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -51,8 +52,7 @@ class DashboardScreen extends StatelessWidget {
           child: ListView(
             children: [
               const SizedBox(height: 8),
-              const Text('What would you like to do?',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const GreetingHeader(),
               if (adaptiveOn) ...[
                 const SizedBox(height: 12),
                 Row(
