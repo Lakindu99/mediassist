@@ -10,7 +10,7 @@ import 'core/services/adaptive_provider.dart';
 import 'core/services/adaptive_engine.dart';
 import 'core/services/behaviour_tracker.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/auth_gate.dart';
+import 'features/onboarding/root_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -98,7 +98,7 @@ class _MediAssistAppState extends State<MediAssistApp> with WidgetsBindingObserv
                 ),
               );
             },
-            home: const AuthGate(),
+            home: const RootGate(),
           );
         },
       ),
