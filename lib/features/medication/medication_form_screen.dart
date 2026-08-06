@@ -3,6 +3,7 @@ import '../../core/services/behaviour_tracker.dart';
 import '../../core/services/medication_service.dart';
 import '../../core/widgets/app_widgets.dart';
 import '../../core/widgets/feedback_helpers.dart';
+import '../../core/models/dose_slot.dart';
 import '../../models/medication.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -21,7 +22,10 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
   final _nameController = TextEditingController();
   final _dosageController = TextEditingController();
   final _notesController = TextEditingController();
-  final List<String> _times = [];
+
+  // The dose schedule (slot + resolved time). This is the source of truth in
+  // the form; we derive the plain _times list from it when saving.
+  final List<DoseTime> _schedule = [];
   bool _isLoading = false;
 
   bool get _isEditing => widget.existing != null;
@@ -34,7 +38,8 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
       _nameController.text = existing.name;
       _dosageController.text = existing.dosage;
       _notesController.text = existing.notes;
-      _times.addAll(existing.times);
+      _schedule.addAll(existing.schedule);
+      _sortSchedule();
     }
     if (!_isEditing) BehaviourTracker.instance.startTask('add_medication');
   }
@@ -47,21 +52,105 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
     super.dispose();
   }
 
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
+  void _sortSchedule() {
+    _schedule.sort((a, b) => a.time.compareTo(b.time));
+  }
+
+  /// Step 1: choose a meal-relative slot (or custom). Step 2: confirm/adjust
+  /// the time. This makes scheduling friendlier for elderly users.
+  Future<void> _addDose() async {
+    final slot = await showModalBottomSheet<DoseSlot>(
       context: context,
-      initialTime: TimeOfDay.now(),
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('When should this be taken?',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: DoseSlot.values.map((s) => ListTile(
+                        leading: Icon(
+                          s == DoseSlot.custom ? Icons.access_time : Icons.restaurant,
+                          color: AppColors.teal,
+                        ),
+                        title: Text(s.label, style: const TextStyle(fontSize: 17)),
+                        trailing: s.defaultTime != null
+                            ? Text(DoseTime(slot: s, time: s.defaultTime!)
+                                .display()
+                                .split('· ')
+                                .last)
+                            : null,
+                        onTap: () => Navigator.pop(context, s),
+                      )).toList(),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
     );
-    if (picked != null) {
-      final formatted =
-          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      if (!_times.contains(formatted)) {
-        setState(() {
-          _times.add(formatted);
-          _times.sort();
-        });
-      }
+    if (slot == null) return;
+
+    // Determine the initial time: a named slot's default, or "now" for custom.
+    String initialTime = slot.defaultTime ?? _nowHHmm();
+
+    // For custom slots (and optionally to fine-tune named ones), open the clock.
+    if (slot == DoseSlot.custom) {
+      final picked = await _pickClock(initialTime);
+      if (picked == null) return;
+      initialTime = picked;
     }
+
+    final dose = DoseTime(slot: slot, time: initialTime);
+    // Avoid exact duplicates (same slot + time).
+    final dup = _schedule
+        .any((d) => d.slot == dose.slot && d.time == dose.time);
+    if (!dup) {
+      setState(() {
+        _schedule.add(dose);
+        _sortSchedule();
+      });
+    }
+  }
+
+  /// Let the user adjust the time of an existing named-slot dose by tapping it.
+  Future<void> _editDoseTime(DoseTime dose) async {
+    final picked = await _pickClock(dose.time);
+    if (picked == null) return;
+    setState(() {
+      final i = _schedule.indexOf(dose);
+      if (i != -1) {
+        _schedule[i] = DoseTime(slot: dose.slot, time: picked);
+        _sortSchedule();
+      }
+    });
+  }
+
+  Future<String?> _pickClock(String hhmm) async {
+    final parts = hhmm.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 8,
+      minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
+    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked == null) return null;
+    return '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _nowHHmm() {
+    final now = TimeOfDay.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _save() async {
@@ -74,11 +163,16 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
       return;
     }
     setState(() => _isLoading = true);
+
+    // Derive the resolved times list (source of truth) from the schedule.
+    final times = _schedule.map((d) => d.time).toList()..sort();
+
     final med = Medication(
       id: widget.existing?.id ?? '',
       name: name,
       dosage: _dosageController.text.trim(),
-      times: _times,
+      times: times,
+      schedule: _schedule,
       notes: _notesController.text.trim(),
     );
     try {
@@ -128,26 +222,36 @@ class _MedicationFormScreenState extends State<MedicationFormScreen> {
                   label: 'Dosage (e.g. 1 tablet, 100mg)',
                   icon: Icons.straighten),
               const SizedBox(height: 24),
-              const Text('Times to take:',
+              const Text('When to take it:',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              if (_times.isEmpty)
+              const SizedBox(height: 4),
+              const Text('Choose a mealtime or a custom time. Tap a time to adjust it.',
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              const SizedBox(height: 10),
+              if (_schedule.isEmpty)
                 const Text('No times added yet.',
                     style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _times
-                    .map((t) => Chip(
-                          avatar: const Icon(Icons.access_time, size: 18),
-                          label: Text(t, style: const TextStyle(fontSize: 16)),
-                          onDeleted: () => setState(() => _times.remove(t)),
-                        ))
-                    .toList(),
-              ),
+              ..._schedule.map((dose) => Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: Icon(
+                        dose.slot == DoseSlot.custom
+                            ? Icons.access_time
+                            : Icons.restaurant,
+                        color: AppColors.teal,
+                      ),
+                      title: Text(dose.display(), style: const TextStyle(fontSize: 16)),
+                      onTap: () => _editDoseTime(dose),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close, size: 22),
+                        tooltip: 'Remove',
+                        onPressed: () => setState(() => _schedule.remove(dose)),
+                      ),
+                    ),
+                  )),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: _pickTime,
+                onPressed: _addDose,
                 icon: const Icon(Icons.add_alarm, size: 22),
                 label: const Text('Add a time', style: TextStyle(fontSize: 16)),
                 style: OutlinedButton.styleFrom(
