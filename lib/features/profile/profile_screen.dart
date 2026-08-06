@@ -157,22 +157,22 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Change Role', style: TextStyle(fontSize: 20)),
         content: StatefulBuilder(
           builder: (context, setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                RadioListTile<UserRole>(
-                  title: const Text('Elderly User', style: TextStyle(fontSize: 17)),
-                  value: UserRole.elderly,
-                  groupValue: selected,
-                  onChanged: (v) => setState(() => selected = v!),
-                ),
-                RadioListTile<UserRole>(
-                  title: const Text('Caregiver', style: TextStyle(fontSize: 17)),
-                  value: UserRole.caregiver,
-                  groupValue: selected,
-                  onChanged: (v) => setState(() => selected = v!),
-                ),
-              ],
+            return RadioGroup<UserRole>(
+              groupValue: selected,
+              onChanged: (v) => setState(() => selected = v!),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<UserRole>(
+                    title: const Text('Elderly User', style: TextStyle(fontSize: 17)),
+                    value: UserRole.elderly,
+                  ),
+                  RadioListTile<UserRole>(
+                    title: const Text('Caregiver', style: TextStyle(fontSize: 17)),
+                    value: UserRole.caregiver,
+                  ),
+                ],
+              ),
             );
           },
         ),
