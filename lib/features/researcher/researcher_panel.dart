@@ -52,7 +52,7 @@ class ResearcherPanel extends StatelessWidget {
                 onChanged: (v) => context.read<AdaptiveProvider>().setAdaptiveMode(v),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             const Text('Adaptation strategy (drives the UI)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

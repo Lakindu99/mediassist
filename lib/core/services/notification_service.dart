@@ -52,12 +52,31 @@ class NotificationService {
         ?.createNotificationChannel(channel);
   }
 
-  /// Ask for notification permission (Android 13+) and exact-alarm permission (Android 12+).
-  Future<void> requestPermissions() async {
+  /// Request notification permission and ensure exact-alarm permission is
+  /// granted (required on Android 12+ for scheduled reminders). If exact alarms
+  /// are not yet allowed, this opens the system settings screen. Returns true
+  /// if exact alarms are allowed afterwards.
+  Future<bool> requestPermissions() async {
     final android = _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    // Notification permission (Android 13+).
     await android?.requestNotificationsPermission();
-    await android?.requestExactAlarmsPermission();
+
+    // Exact-alarm permission (Android 12+).
+    final canExact = await android?.canScheduleExactNotifications() ?? true;
+    if (!canExact) {
+      // Opens the system "Alarms & reminders" screen for this app.
+      await android?.requestExactAlarmsPermission();
+    }
+    return await android?.canScheduleExactNotifications() ?? false;
+  }
+
+  /// Whether the OS currently allows this app to schedule exact alarms.
+  Future<bool> canScheduleExact() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.canScheduleExactNotifications() ?? false;
   }
 
   /// Show a notification immediately — used to test that setup works.
