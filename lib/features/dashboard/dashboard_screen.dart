@@ -15,13 +15,28 @@ import '../../core/widgets/adaptive_recommendation_banner.dart';
 import '../../core/widgets/assistance_level_card.dart';
 import '../../core/theme/app_theme.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _showAllTiles = false;
+  bool _wasSimplified = false;
 
   @override
   Widget build(BuildContext context) {
     final adaptiveOn = context.watch<AdaptiveProvider>().adaptiveMode;
     final simplified = adaptiveOn && context.watch<AdaptiveEngine>().simplifyNav;
+
+    // Collapsing back out of simplified mode should not leave the
+    // "More options" section stuck expanded next time it re-simplifies.
+    if (_wasSimplified && !simplified) {
+      _showAllTiles = false;
+    }
+    _wasSimplified = simplified;
 
     return Scaffold(
       appBar: AppBar(
@@ -102,28 +117,40 @@ class DashboardScreen extends StatelessWidget {
                     settings: const RouteSettings(name: 'appointments'),
                     builder: (_) => const AppointmentListScreen())),
               ),
-              const SizedBox(height: 16),
-              _DashboardTile(
-                icon: Icons.history,
-                title: 'Medication History',
-                subtitle: 'See doses you have taken',
-                color: Colors.purple,
-                simplified: simplified,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    settings: const RouteSettings(name: 'history'),
-                    builder: (_) => const AdherenceHistoryScreen())),
-              ),
-              const SizedBox(height: 16),
-              _DashboardTile(
-                icon: Icons.people,
-                title: 'Caregiver',
-                subtitle: 'Share access or monitor a loved one',
-                color: Colors.brown,
-                simplified: simplified,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                    settings: const RouteSettings(name: 'caregiver'),
-                    builder: (_) => const CaregiverScreen())),
-              ),
+              if (!simplified || _showAllTiles) ...[
+                const SizedBox(height: 16),
+                _DashboardTile(
+                  icon: Icons.history,
+                  title: 'Medication History',
+                  subtitle: 'See doses you have taken',
+                  color: Colors.purple,
+                  simplified: simplified,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      settings: const RouteSettings(name: 'history'),
+                      builder: (_) => const AdherenceHistoryScreen())),
+                ),
+                const SizedBox(height: 16),
+                _DashboardTile(
+                  icon: Icons.people,
+                  title: 'Caregiver',
+                  subtitle: 'Share access or monitor a loved one',
+                  color: Colors.brown,
+                  simplified: simplified,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      settings: const RouteSettings(name: 'caregiver'),
+                      builder: (_) => const CaregiverScreen())),
+                ),
+              ],
+              if (simplified && !_showAllTiles) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: OutlinedButton.icon(
+                    onPressed: () => setState(() => _showAllTiles = true),
+                    icon: const Icon(Icons.more_horiz),
+                    label: const Text('More options'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
