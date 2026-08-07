@@ -8,6 +8,7 @@ import '../../core/services/notification_service.dart';
 import '../../core/services/tts_service.dart';
 import '../../core/services/adaptive_provider.dart';
 import '../../core/services/adaptive_engine.dart';
+import '../../core/services/settings_provider.dart';
 import '../../models/medication.dart';
 import '../../models/appointment.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,7 +16,8 @@ import '../../core/theme/app_theme.dart';
 /// The most important screen for elderly users: shows ONLY what's due today.
 /// Includes a "Read aloud" button (text-to-speech) for users with weak
 /// eyesight; in adaptive mode, when the engine detects the user is struggling,
-/// the plan is read out automatically on open.
+/// the plan is read out automatically on open. Also gives an early heads-up for
+/// doses that are "coming up" within the user's chosen reminder lead time.
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
   @override
@@ -32,8 +34,6 @@ class _TodayScreenState extends State<TodayScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkDueReminders();
-      // Adaptive tie-in: if the engine has escalated to strong adaptation,
-      // read the plan aloud automatically to support the struggling user.
       final on = context.read<AdaptiveProvider>().adaptiveMode;
       final strong = on && context.read<AdaptiveEngine>().activeLevel >= 2;
       if (strong) _readPlanAloud();
@@ -52,6 +52,21 @@ class _TodayScreenState extends State<TodayScreen> {
     final h = int.tryParse(parts[0]) ?? 0;
     final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
     return !now.isBefore(DateTime(now.year, now.month, now.day, h, m));
+  }
+
+  /// True if a dose is coming up within [leadMinutes] (soon, but not yet due).
+  bool _isComingUp(String time, int leadMinutes) {
+    final diff = _minutesUntil(time);
+    return diff > 0 && diff <= leadMinutes;
+  }
+
+  /// Whole minutes until a dose time today (negative if already passed).
+  int _minutesUntil(String time) {
+    final now = DateTime.now();
+    final parts = time.split(':');
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+    return DateTime(now.year, now.month, now.day, h, m).difference(now).inMinutes;
   }
 
   /// Turn "08:30" into a spoken form like "8 30 A M".
@@ -108,20 +123,39 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Future<void> _checkDueReminders() async {
     try {
+      final lead = context.read<SettingsProvider>().reminderLeadMinutes;
       final meds = await _medService.watchMedications().first;
       final taken = await _adherence.watchTakenToday().first;
       final today = DateTime.now();
 
       final due = <String>[];
+      final comingUp = <String>[]; // e.g. "Aspirin in 20 min"
       for (final m in meds) {
         for (final t in m.times) {
           final key = AdherenceService.doseKey(m.id, today, t);
-          if (_isDue(t) && !taken.contains(key)) {
+          if (taken.contains(key)) continue;
+          if (_isDue(t)) {
             due.add('${m.name} at $t');
+          } else if (_isComingUp(t, lead)) {
+            comingUp.add('${m.name} in ${_minutesUntil(t)} min');
           }
         }
       }
-      if (due.isEmpty || !mounted) return;
+
+      if (!mounted) return;
+
+      // Pre-dose heads-up: an early, in-app "coming up soon" notification.
+      if (comingUp.isNotEmpty) {
+        await NotificationService.instance.showNow(
+          901,
+          'Coming up soon',
+          comingUp.length == 1
+              ? '${comingUp.first} — get ready.'
+              : 'You have ${comingUp.length} medications coming up soon.',
+        );
+      }
+
+      if (due.isEmpty) return;
 
       await NotificationService.instance.showNow(
         900,
@@ -175,6 +209,7 @@ class _TodayScreenState extends State<TodayScreen> {
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
+    final lead = context.watch<SettingsProvider>().reminderLeadMinutes;
     return Scaffold(
       appBar: AppBar(
         title: const Text("Today's Plan", style: TextStyle(fontSize: 22)),
@@ -197,7 +232,6 @@ class _TodayScreenState extends State<TodayScreen> {
                   child: Text(DateFormat('EEEE, d MMMM').format(today),
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 ),
-                // Prominent read-aloud button (elderly-friendly, clearly labelled).
                 TextButton.icon(
                   onPressed: _readPlanAloud,
                   icon: const Icon(Icons.volume_up, size: 24),
@@ -240,10 +274,14 @@ class _TodayScreenState extends State<TodayScreen> {
                         final key = AdherenceService.doseKey(d.med.id, today, d.time);
                         final isTaken = taken.contains(key);
                         final isDue = !isTaken && _isDue(d.time);
+                        final isComingUp =
+                            !isTaken && !isDue && _isComingUp(d.time, lead);
                         return _DoseCard(
                           dose: d,
                           isTaken: isTaken,
                           isDue: isDue,
+                          isComingUp: isComingUp,
+                          minutesUntil: isComingUp ? _minutesUntil(d.time) : 0,
                           onToggle: () async {
                             if (isTaken) {
                               await _adherence.undoTaken(medId: d.med.id, time: d.time);
@@ -320,11 +358,15 @@ class _DoseCard extends StatelessWidget {
   final _Dose dose;
   final bool isTaken;
   final bool isDue;
+  final bool isComingUp;
+  final int minutesUntil;
   final VoidCallback onToggle;
   const _DoseCard({
     required this.dose,
     required this.isTaken,
     required this.isDue,
+    required this.isComingUp,
+    required this.minutesUntil,
     required this.onToggle,
   });
 
@@ -335,14 +377,24 @@ class _DoseCard extends StatelessWidget {
       cardColor = Colors.green.shade50;
     } else if (isDue) {
       cardColor = Colors.orange.shade50;
+    } else if (isComingUp) {
+      cardColor = Colors.blue.shade50;
     }
+
+    Color borderColor = Colors.transparent;
+    if (isDue && !isTaken) {
+      borderColor = Colors.deepOrange;
+    } else if (isComingUp) {
+      borderColor = Colors.blue;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isDue && !isTaken
-            ? const BorderSide(color: Colors.deepOrange, width: 1.5)
-            : BorderSide.none,
+        side: borderColor == Colors.transparent
+            ? BorderSide.none
+            : BorderSide(color: borderColor, width: 1.5),
       ),
       color: cardColor,
       child: Padding(
@@ -369,6 +421,21 @@ class _DoseCard extends StatelessWidget {
                               fontSize: 14,
                               color: Colors.deepOrange,
                               fontWeight: FontWeight.bold)),
+                    ),
+                  if (isComingUp)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.schedule, size: 15, color: Colors.blue),
+                          const SizedBox(width: 4),
+                          Text('Coming up · in $minutesUntil min',
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ),
                 ],
               ),
