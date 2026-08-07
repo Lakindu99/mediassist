@@ -69,6 +69,44 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
 
+            const SizedBox(height: 32),
+            const Text('Reminder Timing',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('How early should we remind you before a medicine is due?',
+                style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+            const SizedBox(height: 12),
+            Row(
+              children: [15, 30, 60].map((mins) {
+                final selected = settings.reminderLeadMinutes == mins;
+                final scheme = Theme.of(context).colorScheme;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: InkWell(
+                      onTap: () => context.read<SettingsProvider>().setReminderLeadMinutes(mins),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 6),
+                        decoration: BoxDecoration(
+                          color: selected ? scheme.primaryContainer : Colors.transparent,
+                          border: Border.all(
+                              color: selected ? scheme.primary : Colors.grey,
+                              width: selected ? 2.5 : 1.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text('$mins min',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
             // ---------- Researcher / Advanced ----------
             const SizedBox(height: 40),
             const Divider(thickness: 1),

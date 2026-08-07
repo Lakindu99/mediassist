@@ -15,7 +15,7 @@ class SettingsProvider extends ChangeNotifier {
 
   double _fontScale = 1.0; // 1.0 = normal
   bool _highContrast = false;
-  int _reminderLeadMinutes = 20; // how early "coming up" reminders fire
+  int _reminderLeadMinutes = 30; // how early "coming up" reminders fire
 
   double get fontScale => _fontScale;
   bool get highContrast => _highContrast;
@@ -26,7 +26,7 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _fontScale = prefs.getDouble(_kFontScale) ?? 1.0;
     _highContrast = prefs.getBool(_kHighContrast) ?? false;
-    _reminderLeadMinutes = prefs.getInt(_kReminderLeadMinutes) ?? 20;
+    _reminderLeadMinutes = prefs.getInt(_kReminderLeadMinutes) ?? 30;
     notifyListeners();
   }
 
