@@ -12,6 +12,7 @@ import '../caregiver/caregiver_screen.dart';
 import '../researcher/researcher_panel.dart';
 import 'greeting_header.dart';
 import '../../core/widgets/adaptive_recommendation_banner.dart';
+import '../../core/widgets/assistance_level_card.dart';
 import '../../core/theme/app_theme.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -66,6 +67,7 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ],
+              const AssistanceLevelCard(),
               const AdaptiveRecommendationBanner(),
               const SizedBox(height: 20),
               _DashboardTile(
